@@ -1,3 +1,5 @@
+pip install plot-metric
+
 import streamlit as st # web development
 import numpy as np # np mean, np random 
 import pandas as pd # read csv, df manipulation
