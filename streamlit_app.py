@@ -1,63 +1,92 @@
-import streamlit as st
-import pandas as pd
-import plost
+import time  # to simulate a real time data, time loop
 
-st.set_page_config(layout='wide', initial_sidebar_state='expanded')
+import numpy as np  # np mean, np random
+import pandas as pd  # read csv, df manipulation
+import plotly.express as px  # interactive charts
+import streamlit as st  # 🎈 data web app development
 
-with open('style.css') as f:
-    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-    
-st.sidebar.header('Dashboard `version 2`')
+st.set_page_config(
+    page_title="Real-Time Data Science Dashboard",
+    page_icon="✅",
+    layout="wide",
+)
 
-st.sidebar.subheader('Heat map parameter')
-time_hist_color = st.sidebar.selectbox('Color by', ('temp_min', 'temp_max')) 
+# read csv from a github repo
+dataset_url = "https://raw.githubusercontent.com/Lexie88rus/bank-marketing-analysis/master/bank.csv"
 
-st.sidebar.subheader('Donut chart parameter')
-donut_theta = st.sidebar.selectbox('Select data', ('q2', 'q3'))
+# read csv from a URL
+@st.experimental_memo
+def get_data() -> pd.DataFrame:
+    return pd.read_csv(dataset_url)
 
-st.sidebar.subheader('Line chart parameters')
-plot_data = st.sidebar.multiselect('Select data', ['temp_min', 'temp_max'], ['temp_min', 'temp_max'])
-plot_height = st.sidebar.slider('Specify plot height', 200, 500, 250)
+df = get_data()
 
-st.sidebar.markdown('''
----
-Created with ❤️ by [Data Professor](https://youtube.com/dataprofessor/).
-''')
+# dashboard title
+st.title("Real-Time / Live Data Science Dashboard")
 
+# top-level filters
+job_filter = st.selectbox("Select the Job", pd.unique(df["job"]))
 
-# Row A
-st.markdown('### Metrics')
-col1, col2, col3 = st.columns(3)
-col1.metric("Temperature", "70 °F", "1.2 °F")
-col2.metric("Wind", "9 mph", "-8%")
-col3.metric("Humidity", "86%", "4%")
+# creating a single-element container
+placeholder = st.empty()
 
-# Row B
-seattle_weather = pd.read_csv('https://raw.githubusercontent.com/tvst/plost/master/data/seattle-weather.csv', parse_dates=['date'])
-stocks = pd.read_csv('https://raw.githubusercontent.com/dataprofessor/data/master/stocks_toy.csv')
+# dataframe filter
+df = df[df["job"] == job_filter]
 
-c1, c2 = st.columns((7,3))
-with c1:
-    st.markdown('### Heatmap')
-    plost.time_hist(
-    data=seattle_weather,
-    date='date',
-    x_unit='week',
-    y_unit='day',
-    color=time_hist_color,
-    aggregate='median',
-    legend=None,
-    height=345,
-    use_container_width=True)
-with c2:
-    st.markdown('### Donut chart')
-    plost.donut_chart(
-        data=stocks,
-        theta=donut_theta,
-        color='company',
-        legend='bottom', 
-        use_container_width=True)
+# near real-time / live feed simulation
+for seconds in range(200):
 
-# Row C
-st.markdown('### Line chart')
-st.line_chart(seattle_weather, x = 'date', y = plot_data, height = plot_height)
+    df["age_new"] = df["age"] * np.random.choice(range(1, 5))
+    df["balance_new"] = df["balance"] * np.random.choice(range(1, 5))
+
+    # creating KPIs
+    avg_age = np.mean(df["age_new"])
+
+    count_married = int(
+        df[(df["marital"] == "married")]["marital"].count()
+        + np.random.choice(range(1, 30))
+    )
+
+    balance = np.mean(df["balance_new"])
+
+    with placeholder.container():
+
+        # create three columns
+        kpi1, kpi2, kpi3 = st.columns(3)
+
+        # fill in those three columns with respective metrics or KPIs
+        kpi1.metric(
+            label="Age ⏳",
+            value=round(avg_age),
+            delta=round(avg_age) - 10,
+        )
+        
+        kpi2.metric(
+            label="Married Count 💍",
+            value=int(count_married),
+            delta=-10 + count_married,
+        )
+        
+        kpi3.metric(
+            label="A/C Balance ＄",
+            value=f"$ {round(balance,2)} ",
+            delta=-round(balance / count_married) * 100,
+        )
+
+        # create two columns for charts
+        fig_col1, fig_col2 = st.columns(2)
+        with fig_col1:
+            st.markdown("### First Chart")
+            fig = px.density_heatmap(
+                data_frame=df, y="age_new", x="marital"
+            )
+            st.write(fig)
+            
+        with fig_col2:
+            st.markdown("### Second Chart")
+            fig2 = px.histogram(data_frame=df, x="age_new")
+            st.write(fig2)
+
+        st.markdown("### Detailed Data View")
+        st.dataframe(df)
+        time.sleep(1)
